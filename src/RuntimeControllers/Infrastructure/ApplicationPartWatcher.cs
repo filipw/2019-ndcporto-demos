@@ -14,7 +14,7 @@ namespace RuntimeControllers
 {
     public class ApplicationPartWatcher
     {
-        private ConcurrentDictionary<string, List<Assembly>> _loadedAssemblies = new ConcurrentDictionary<string, List<Assembly>>();
+        private ConcurrentDictionary<string, (AssemblyLoadContext context, List<Assembly> assemblies)> _loadedAssemblies = new ConcurrentDictionary<string, (AssemblyLoadContext, List<Assembly>)>();
         private readonly OnDemandActionDescriptorChangeProvider _onDemandActionDescriptorChangeProvider;
         private readonly ApplicationPartManager _applicationPartManager;
         private readonly ILogger<ApplicationPartWatcher> _logger;
@@ -48,12 +48,13 @@ namespace RuntimeControllers
                 //hack to let the file complete the creation...
                 Thread.Sleep(1000);
 
+                var loadContext = new CollectibleAssemblyLoadContext();
                 var loadedFolderAssemblies = new List<Assembly>();
                 foreach (var file in Directory.EnumerateFiles(e.FullPath, "*.dll"))
                 {
                     using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     {
-                        var assembly = AssemblyLoadContext.Default.LoadFromStream(fs);
+                        var assembly = loadContext.LoadFromStream(fs);
                         loadedFolderAssemblies.Add(assembly);
 
                         var partFactory = ApplicationPartFactory.GetApplicationPartFactory(assembly);
@@ -67,7 +68,7 @@ namespace RuntimeControllers
 
                 if (loadedFolderAssemblies.Any())
                 {
-                    _loadedAssemblies[e.FullPath] = loadedFolderAssemblies;
+                    _loadedAssemblies[e.FullPath] = (loadContext, loadedFolderAssemblies);
                     _onDemandActionDescriptorChangeProvider.TokenSource.Cancel();
                 }
             };
@@ -75,9 +76,9 @@ namespace RuntimeControllers
             {
                 _logger.LogInformation("Deleted: " + e.FullPath);
 
-                if (_loadedAssemblies.TryGetValue(e.FullPath, out var loadedFolderAssemblies))
+                if (_loadedAssemblies.TryGetValue(e.FullPath, out var loadedData))
                 {
-                    foreach (var assembly in loadedFolderAssemblies)
+                    foreach (var assembly in loadedData.assemblies)
                     {
                         var existingAssemblyPart = _applicationPartManager.ApplicationParts.FirstOrDefault(x => x.Name == assembly.GetName().Name);
                         if (existingAssemblyPart != null)
@@ -87,10 +88,22 @@ namespace RuntimeControllers
                     }
 
                     _onDemandActionDescriptorChangeProvider.TokenSource.Cancel();
+                    loadedData.context.Unload();
                 }
 
             };
             watcher.EnableRaisingEvents = true;
+        }
+    }
+
+    public class CollectibleAssemblyLoadContext : AssemblyLoadContext
+    {
+        public CollectibleAssemblyLoadContext() : base(isCollectible: true)
+        { }
+
+        protected override Assembly Load(AssemblyName assemblyName)
+        {
+            return null;
         }
     }
 }
