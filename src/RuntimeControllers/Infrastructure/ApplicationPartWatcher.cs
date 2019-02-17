@@ -48,7 +48,7 @@ namespace RuntimeControllers
                 //hack to let the file complete the creation...
                 Thread.Sleep(1000);
 
-                var loadContext = new CollectibleAssemblyLoadContext();
+                var loadContext = new PluginAssemblyLoadContext();
                 var loadedFolderAssemblies = new List<Assembly>();
                 foreach (var file in Directory.EnumerateFiles(e.FullPath, "*.dll"))
                 {
@@ -88,7 +88,9 @@ namespace RuntimeControllers
                     }
 
                     _onDemandActionDescriptorChangeProvider.TokenSource.Cancel();
+#if NETCOREAPP3_0
                     loadedData.context.Unload();
+#endif
                 }
 
             };
@@ -96,10 +98,12 @@ namespace RuntimeControllers
         }
     }
 
-    public class CollectibleAssemblyLoadContext : AssemblyLoadContext
+    public class PluginAssemblyLoadContext : AssemblyLoadContext
     {
-        public CollectibleAssemblyLoadContext() : base(isCollectible: true)
+#if NETCOREAPP3_0
+        public PluginAssemblyLoadContext() : base(isCollectible: true)
         { }
+#endif
 
         protected override Assembly Load(AssemblyName assemblyName)
         {
