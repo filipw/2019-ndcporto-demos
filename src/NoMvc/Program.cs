@@ -45,7 +45,7 @@ namespace NoMvc
                     })
                     .UseAuthentication() // consume the JWT tokens in the API
                     .UseAuthorization()
-                    .UseEndpointRouting(r => // define all API endpoints
+                    .UseRouting(r => // define all API endpoints
                     {
                         var contactRepo = r.ServiceProvider.GetRequiredService<InMemoryContactRepository>();
 

@@ -10,15 +10,17 @@ namespace Convention1
     {
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddAuthorization().AddAuthentication("Bearer").AddJwtBearer();
             services.AddMvc(o =>
             {
-                o.Conventions.Insert(0, new GlobalRoutePrefixConvention("api/[controller]"));
+                o.Conventions.Insert(0, new AuthorizeConvention());
             });
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
             app.UseHttpsRedirection();
+            app.UseAuthentication();
             app.UseMvc();
         }
     }
