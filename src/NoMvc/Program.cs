@@ -16,77 +16,87 @@ namespace NoMvc
             await WebHost.CreateDefaultBuilder(args)
                 .ConfigureServices(s =>
                 {
+                    s.AddAuthorization(options =>
+                    {
+                        // set up authorization policy for the API
+                        options.AddPolicy("API", policy =>
+                        {
+                            policy.AddAuthenticationSchemes("Bearer");
+                            policy.RequireAuthenticatedUser().RequireClaim("scope", "write");
+                        });
+                    })
+                    .AddAuthentication("Bearer")
+                    .AddIdentityServerAuthentication("Bearer", o =>
+                    {
+                        o.Authority = "https://localhost:5001/identity";
+                    });
                     s.AddEmbeddedIdentityServer();
+
+                    s.AddSingleton(new InMemoryContactRepository());
                     s.AddRouting();
                 })
                 .Configure(app =>
                 {
+                    app.UseHttpsRedirection();
                     app.Map("/identity", id =>
                     {
                         // use embedded identity server to issue tokens
                         id.UseIdentityServer();
                     })
                     .UseAuthentication() // consume the JWT tokens in the API
-                    .Use(async (c, next) => // authorize the whole API against the API policy
+                    .UseAuthorization()
+                    .UseRouting(r => // define all API endpoints
                     {
-                        var allowed = await c.RequestServices.GetRequiredService<IAuthorizationService>().AuthorizeAsync(c.User, "API");
-                        if (!allowed.Succeeded)
-                        {
-                            c.Response.StatusCode = 401;
-                            return;
-                        }
+                        var contactRepo = r.ServiceProvider.GetRequiredService<InMemoryContactRepository>();
 
-                        await next();
-                    })
-                    .UseRouter(r => // define all API endpoints
-                    {
-                        var contactRepo = new InMemoryContactRepository();
-
-                        r.MapGet("contacts", async (request, response, routeData) =>
+                        r.MapGet("contacts", async context =>
                         {
                             var contacts = await contactRepo.GetAll();
-                            response.WriteJson(contacts);
+                            context.Response.WriteJson(contacts);
                         });
 
-                        r.MapGet("contacts/{id:int}", async (request, response, routeData) =>
+                        r.MapGet("contacts/{id:int}", async context =>
                         {
-                            var contact = await contactRepo.Get(Convert.ToInt32(routeData.Values["id"]));
+                            var contact = await contactRepo.Get(Convert.ToInt32(context.GetRouteData().Values["id"]));
                             if (contact == null)
                             {
-                                response.StatusCode = 404;
+                                context.Response.StatusCode = 404;
                                 return;
                             }
 
-                            response.WriteJson(contact);
+                            context.Response.WriteJson(contact);
                         });
 
-                        r.MapPost("contacts", async (request, response, routeData) =>
+                        r.MapPost("contacts", async context =>
                         {
-                            var newContact = request.HttpContext.ReadFromJson<Contact>();
+                            var newContact = context.ReadFromJson<Contact>();
                             if (newContact == null) return;
 
                             await contactRepo.Add(newContact);
 
-                            response.StatusCode = 201;
-                            response.WriteJson(newContact);
-                        });
+                            context.Response.StatusCode = 201;
+                            context.Response.WriteJson(newContact);
+                        })
+                        .RequireAuthorization("API");
 
-                        r.MapPut("contacts/{id:int}", async (request, response, routeData) =>
+                        r.MapPut("contacts/{id:int}", async context =>
                         {
-                            var updatedContact = request.HttpContext.ReadFromJson<Contact>();
+                            var updatedContact = context.ReadFromJson<Contact>();
                             if (updatedContact == null) return;
 
-                            updatedContact.ContactId = Convert.ToInt32(routeData.Values["id"]);
+                            updatedContact.ContactId = Convert.ToInt32(context.GetRouteData().Values["id"]);
                             await contactRepo.Update(updatedContact);
 
-                            response.StatusCode = 204;
-                        });
+                            context.Response.StatusCode = 204;
+                        })
+                        .RequireAuthorization(new AuthorizeAttribute() { Policy = "API" });
 
-                        r.MapDelete("contacts/{id:int}", async (request, response, routeData) =>
+                        r.MapDelete("contacts/{id:int}", async context =>
                         {
-                            await contactRepo.Delete(Convert.ToInt32(routeData.Values["id"]));
-                            response.StatusCode = 204;
-                        });
+                            await contactRepo.Delete(Convert.ToInt32(context.GetRouteData().Values["id"]));
+                            context.Response.StatusCode = 204;
+                        })
+                        .RequireAuthorization("API");
                     });
                 })
                 .Build().RunAsync();

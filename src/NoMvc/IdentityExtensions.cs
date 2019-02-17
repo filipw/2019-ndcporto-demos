@@ -15,21 +15,6 @@ namespace NoMvc
                 AddTestClients().
                 AddTestResources().
                 AddDeveloperSigningCredential();
-
-            s.AddAuthorization(options =>
-            {
-                // set up authorization policy for the API
-                options.AddPolicy("API", policy =>
-                {
-                    policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme);
-                    policy.RequireAuthenticatedUser().RequireClaim("scope", "read");
-                });
-            })
-            .AddAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme)
-            .AddIdentityServerAuthentication(IdentityServerAuthenticationDefaults.AuthenticationScheme, o =>
-            {
-                o.Authority = "https://localhost:5001/identity";
-            });
         }
     }
 
@@ -50,7 +35,7 @@ namespace NoMvc
                 },
                 AllowedScopes = new[]
                 {
-                    "read"
+                    "write"
                 }
             }});
         }
@@ -63,7 +48,7 @@ namespace NoMvc
                 {
                     Scopes =
                     {
-                        new Scope("read")
+                        new Scope("write")
                     },
                     Enabled = true
                 },
