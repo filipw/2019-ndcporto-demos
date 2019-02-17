@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="WebApiContrib.Core" />
   </ItemGroup>
 
   <ItemGroup>
