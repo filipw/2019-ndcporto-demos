@@ -8,6 +8,26 @@ namespace NoMvc
 {
     public static class IdentityExtensions
     {
+        public static void AddAuthenticationAndAuthorization(this IServiceCollection s)
+        {
+            s.AddAuthorization(options =>
+            {
+                // set up authorization policy for the API
+                options.AddPolicy("API", policy =>
+                {
+                    policy.AddAuthenticationSchemes("Bearer");
+                    policy.RequireAuthenticatedUser().RequireClaim("scope", "write");
+                });
+            })
+            .AddAuthorizationPolicyEvaluator()
+            .AddAuthentication("Bearer")
+            .AddJwtBearer(options =>
+            {
+                options.Authority = "https://localhost:5001/identity";
+                options.Audience = "https://localhost:5001";
+            });
+        }
+
         public static void AddEmbeddedIdentityServer(this IServiceCollection s)
         {
             // set up embedded identity server
@@ -44,7 +64,7 @@ namespace NoMvc
         {
             return builder.AddInMemoryApiResources(new[]
             {
-                new ApiResource("embedded")
+                new ApiResource("https://localhost:5001")
                 {
                     Scopes =
                     {

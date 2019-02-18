@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NoMvc.Data;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore;
+using Microsoft.AspNetCore.Http.Endpoints;
 
 namespace NoMvc
 {
@@ -16,20 +17,10 @@ namespace NoMvc
             await WebHost.CreateDefaultBuilder(args)
                 .ConfigureServices(s =>
                 {
-                    s.AddAuthorization(options =>
-                    {
-                        // set up authorization policy for the API
-                        options.AddPolicy("API", policy =>
-                        {
-                            policy.AddAuthenticationSchemes("Bearer");
-                            policy.RequireAuthenticatedUser().RequireClaim("scope", "write");
-                        });
-                    })
-                    .AddAuthentication("Bearer")
-                    .AddIdentityServerAuthentication("Bearer", o =>
-                    {
-                        o.Authority = "https://localhost:5001/identity";
-                    });
+                    // set up JWT authentication and API policy
+                    s.AddAuthenticationAndAuthorization();
+
+                    // set up embedded Identity Server
                     s.AddEmbeddedIdentityServer();
 
                     s.AddSingleton(new InMemoryContactRepository());
@@ -37,15 +28,7 @@ namespace NoMvc
                 })
                 .Configure(app =>
                 {
-                    app.UseHttpsRedirection();
-                    app.Map("/identity", id =>
-                    {
-                        // use embedded identity server to issue tokens
-                        id.UseIdentityServer();
-                    })
-                    .UseAuthentication() // consume the JWT tokens in the API
-                    .UseAuthorization()
-                    .UseRouting(r => // define all API endpoints
+                    app.UseRouting(r => // define all API endpoints
                     {
                         var contactRepo = r.ServiceProvider.GetRequiredService<InMemoryContactRepository>();
 
@@ -77,7 +60,7 @@ namespace NoMvc
                             context.Response.StatusCode = 201;
                             context.Response.WriteJson(newContact);
                         })
-                        .RequireAuthorization("API");
+                        .RequireAuthorization(new AuthorizeAttribute() { Policy = "API" });
 
                         r.MapPut("contacts/{id:int}", async context =>
                         {
@@ -97,6 +80,15 @@ namespace NoMvc
                             context.Response.StatusCode = 204;
                         })
                         .RequireAuthorization("API");
+                    });
+
+                    app.UseAuthentication();
+                    app.UseAuthorization();
+
+                    app.Map("/identity", id =>
+                    {
+                        // use embedded identity server to issue tokens
+                        id.UseIdentityServer();
                     });
                 })
                 .Build().RunAsync();
