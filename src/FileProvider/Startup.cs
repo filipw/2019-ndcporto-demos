@@ -20,8 +20,6 @@ namespace FileProvider
 
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddOptions();
-
             var blobOptions = Configuration.GetSection("AzureBlobOptions").Get<AzureBlobOptions>();
             var azureBlobFileProvider = new AzureBlobFileProvider(blobOptions);
             services.AddSingleton(azureBlobFileProvider);

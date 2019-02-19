@@ -11,9 +11,9 @@ namespace Convention1
     {
         public void Apply(ApplicationModel application)
         {
-            foreach (var controller in application.Controllers)
+            foreach (var controllerModel in application.Controllers)
             {
-                foreach (var actionModel in controller.Actions)
+                foreach (var actionModel in controllerModel.Actions)
                 {
                     if (actionModel.ActionName.StartsWith("Authorized") && 
                         !actionModel.Filters.OfType<IAuthorizeData>().Any()) 
