@@ -13,7 +13,7 @@ namespace ParallelPipelines
         {
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
             app.IsolatedMap<StartupAdmin>("/admin");
             app.IsolatedMap<StartupCustomer>("/customer");

@@ -18,14 +18,14 @@ namespace NoMvcActionResults
 {
     public static class HttpExtensions
     {
-        public static Task WriteActionResult<TResult>(this HttpResponse response, TResult result)
-            where TResult : IActionResult
+        public static Task WriteActionResult<TActionResult>(this HttpResponse response, TActionResult result)
+            where TActionResult : IActionResult
         {
-            var executor = response.HttpContext.RequestServices.GetService<IActionResultExecutor<TResult>>();
+            var executor = response.HttpContext.RequestServices.GetService<IActionResultExecutor<TActionResult>>();
 
             if (executor == null)
             {
-                throw new InvalidOperationException($"No action result executor for {typeof(TResult).FullName} registered.");
+                throw new InvalidOperationException($"No action result executor for {typeof(TActionResult).FullName} registered.");
             }
 
             var routeData = response.HttpContext.GetRouteData() ?? new RouteData();

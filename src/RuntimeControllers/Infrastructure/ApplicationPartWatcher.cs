@@ -6,18 +6,21 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace RuntimeControllers
 {
-    public class ApplicationPartWatcher
+    public class ApplicationPartWatcher : IHostedService
     {
         private ConcurrentDictionary<string, (AssemblyLoadContext context, List<Assembly> assemblies)> _loadedAssemblies = new ConcurrentDictionary<string, (AssemblyLoadContext, List<Assembly>)>();
         private readonly OnDemandActionDescriptorChangeProvider _onDemandActionDescriptorChangeProvider;
         private readonly ApplicationPartManager _applicationPartManager;
         private readonly ILogger<ApplicationPartWatcher> _logger;
+        private FileSystemWatcher _watcher;
 
         public ApplicationPartWatcher(IActionDescriptorChangeProvider onDemandActionDescriptorChangeProvider, 
                 ApplicationPartManager applicationPartManager, ILoggerFactory loggerFactory)
@@ -27,22 +30,22 @@ namespace RuntimeControllers
             _logger = loggerFactory.CreateLogger<ApplicationPartWatcher>();
         }
 
-        public void Watch(string path)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
-            var configFolderPath = Path.Combine(Directory.GetCurrentDirectory(), path);
+            var configFolderPath = Path.Combine(Directory.GetCurrentDirectory(), "plugins");
 
             if (!Directory.Exists(configFolderPath))
                 Directory.CreateDirectory(configFolderPath);
 
-            var watcher = new FileSystemWatcher()
+            _watcher = new FileSystemWatcher()
             {
                 Path = configFolderPath,
                 NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.DirectoryName
             };
 
-            watcher.Changed += (s, e) => _logger.LogInformation("Changed: " + e.FullPath);
-            watcher.Renamed += (s, e) => _logger.LogInformation("Renamed: " + e.OldFullPath + " to " + e.FullPath);
-            watcher.Created += (s, e) =>
+            _watcher.Changed += (s, e) => _logger.LogInformation("Changed: " + e.FullPath);
+            _watcher.Renamed += (s, e) => _logger.LogInformation("Renamed: " + e.OldFullPath + " to " + e.FullPath);
+            _watcher.Created += (s, e) =>
             {
                 _logger.LogInformation("Created: " + e.FullPath);
                 //hack to let the file complete the creation...
@@ -72,7 +75,7 @@ namespace RuntimeControllers
                     _onDemandActionDescriptorChangeProvider.TokenSource.Cancel();
                 }
             };
-            watcher.Deleted += (s, e) =>
+            _watcher.Deleted += (s, e) =>
             {
                 _logger.LogInformation("Deleted: " + e.FullPath);
 
@@ -94,7 +97,14 @@ namespace RuntimeControllers
                 }
 
             };
-            watcher.EnableRaisingEvents = true;
+            _watcher.EnableRaisingEvents = true;
+            return Task.CompletedTask;
+        }
+
+        public Task StopAsync(CancellationToken cancellationToken)
+        {
+            _watcher.Dispose();
+            return Task.CompletedTask;
         }
     }
 

@@ -10,19 +10,17 @@ namespace RuntimeControllers
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<IActionDescriptorChangeProvider, OnDemandActionDescriptorChangeProvider>();
-            services.AddSingleton<ApplicationPartWatcher>();
+            services.AddHostedService<ApplicationPartWatcher>();
 
+            services.AddSingleton<IActionDescriptorChangeProvider, OnDemandActionDescriptorChangeProvider>();
             services.AddMvc();
         }
 
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ApplicationPartWatcher applicationPartWatcher)
+        public void Configure(IApplicationBuilder app)
         {
             app.UseDeveloperExceptionPage();
             app.UseHttpsRedirection();
             app.UseMvcWithDefaultRoute();
-
-            Task.Run(() => applicationPartWatcher.Watch("plugins"));
         }
     }
 }
