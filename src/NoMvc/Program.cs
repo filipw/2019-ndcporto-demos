@@ -23,7 +23,7 @@ namespace NoMvc
                     // set up embedded Identity Server
                     s.AddEmbeddedIdentityServer();
 
-                    s.AddSingleton(new InMemoryContactRepository());
+                    s.AddSingleton<InMemoryContactRepository>();
                     s.AddRouting();
                 })
                 .Configure(app =>

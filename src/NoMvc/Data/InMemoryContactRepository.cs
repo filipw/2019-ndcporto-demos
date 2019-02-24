@@ -10,8 +10,8 @@ namespace NoMvc.Data
         private readonly List<Contact> _contacts = new List<Contact>
         {
             new Contact { ContactId = 1, Name = "Filip W", Address = "Bahnhofstrasse 1", City = "Zurich" },
-            new Contact { ContactId = 3, Name = "Aaron Sanchez", Address = "1 Blue Jays Way", City = "Toronto" },
-            new Contact { ContactId = 4, Name = "Mitch Marner", Address = "40 Bay St", City = "Toronto" }
+            new Contact { ContactId = 2, Name = "Aaron Sanchez", Address = "1 Blue Jays Way", City = "Toronto" },
+            new Contact { ContactId = 3, Name = "Mitch Marner", Address = "40 Bay St", City = "Toronto" }
         };
 
         public Task<IEnumerable<Contact>> GetAll()

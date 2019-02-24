@@ -31,7 +31,7 @@ namespace NoMvcActionResults
                             var contacts = new[]
                             {
                                 new Contact { Name = "Filip", City = "Zurich" },
-                                new Contact { Name = "No Filip", City = "Not Zurich" }
+                                new Contact { Name = "Not Filip", City = "Not Zurich" }
                             };
 
                             var objectResult = new ObjectResult(contacts);
