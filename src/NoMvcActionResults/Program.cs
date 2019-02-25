@@ -45,7 +45,8 @@ namespace NoMvcActionResults
                             var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 
                                 64 * 1024, FileOptions.Asynchronous | FileOptions.SequentialScan);
 
-                            await response.WriteActionResult(new FileStreamResult(fileStream, "application/pdf"));
+                            var streamResult = new FileStreamResult(fileStream, "application/pdf");
+                            await response.WriteActionResult(streamResult);
                         });
 
                         #region simpler
